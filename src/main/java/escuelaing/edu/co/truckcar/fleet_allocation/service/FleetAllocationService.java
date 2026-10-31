@@ -385,6 +385,9 @@ public class FleetAllocationService implements IFleetAllocationService {
             restClient.patch()
                     .uri(loadAllocationServiceUrl + "/api/v1/loads/" + loadId + "/assign")
                     .headers(headers -> {
+                        // Load-Allocation solo deja asignar a COORDINADOR, ADMIN o al motor (SYSTEM). La llamada va por
+                        // truckcar-network, no por el gateway, que descarta este encabezado si lo envía un cliente.
+                        headers.set("X-Auth-Role", "SYSTEM");
                         if (correlationId != null) {
                             headers.set("X-Correlation-Id", correlationId.toString());
                         }

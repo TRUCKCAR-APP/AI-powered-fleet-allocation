@@ -26,6 +26,17 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.UNPROCESSABLE_ENTITY);
     }
 
+    @ExceptionHandler(AllocationAccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDenied(AllocationAccessDeniedException ex) {
+        HttpStatus status = ex.isUnauthenticated() ? HttpStatus.UNAUTHORIZED : HttpStatus.FORBIDDEN;
+        Map<String, Object> error = new HashMap<>();
+        error.put("timestamp", LocalDateTime.now());
+        error.put("status", status.value());
+        error.put("error", ex.isUnauthenticated() ? "Usuario no autenticado" : "Operación no permitida");
+        error.put("message", ex.getMessage());
+        return new ResponseEntity<>(error, status);
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
         Map<String, Object> error = new HashMap<>();
