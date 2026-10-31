@@ -6,15 +6,28 @@ spring:
     name: ms-ai-fleet-allocation
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/truckcar_db
+    # Fuera de Docker (IDE/tests) la conexión es directa y el esquema va en currentSchema. En Docker se pasa por
+    # PgBouncer y el search_path lo fija el rol del servicio.
+    url: jdbc:postgresql://localhost:5432/truckcar_db?currentSchema=fleet_allocation,public
     username: truckcar_admin
     password: truckcar_password
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: update
+      # El esquema lo gestiona Flyway (db/migration); Hibernate solo comprueba que coincida con las entidades.
+      ddl-auto: validate
     show-sql: false
+
+  flyway:
+    enabled: true
+    # Esquema propio del servicio (rol y esquema creados por db-init); el historial de Flyway vive en él.
+    schemas: fleet_allocation
+    default-schema: fleet_allocation
+    # Bases anteriores a Flyway (tablas creadas por Hibernate): línea base 0 para que V1 (idempotente) se aplique.
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
 
   kafka:
     bootstrap-servers: localhost:9092
