@@ -5,11 +5,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.http.converter.HttpMessageConverter;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.client.RestClient;
 
+import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.List;
 import java.util.function.Consumer;
@@ -21,6 +22,9 @@ public class RestClientConfig {
      * Timeouts estrictos hacia fleets-drivers y Load-Allocation: sin ellos un vecino colgado bloqueaba el hilo del
      * consumidor de Kafka (y con él la partición) indefinidamente. El builder autoconfigurado instrumenta cada llamada
      * (span hijo, cabeceras traceparent y X-Correlation-Id, métrica http.client.requests).
+     * <p>
+     * java.net.http y no HttpURLConnection (SimpleClientHttpRequestFactory): HttpURLConnection no admite PATCH, y la
+     * confirmación de la asignación es PATCH /api/v1/loads/{id}/assign.
      */
     @Bean
     public RestClient restClient(
@@ -28,8 +32,8 @@ public class RestClientConfig {
             ObjectMapper objectMapper,
             @Value("${truckcar.http.connect-timeout:2s}") Duration connectTimeout,
             @Value("${truckcar.http.read-timeout:4s}") Duration readTimeout) {
-        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
-        requestFactory.setConnectTimeout(connectTimeout);
+        HttpClient httpClient = HttpClient.newBuilder().connectTimeout(connectTimeout).build();
+        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
         requestFactory.setReadTimeout(readTimeout);
         return builder.requestFactory(requestFactory)
                 .messageConverters(ignoringUnknownProperties(objectMapper))
