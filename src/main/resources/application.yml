@@ -96,3 +96,35 @@ services:
     url: http://localhost:8083
   fleets-drivers:
     url: http://localhost:8081
+
+# ── Observabilidad ──────────────────────────────────────────────────────────────────────────────
+# /actuator/prometheus solo es accesible dentro de la red interna: el api-gateway no enruta /actuator/**.
+# Las trazas se exportan por OTLP al otel-collector cuando se define MANAGEMENT_OTLP_TRACING_ENDPOINT (en Docker,
+# http://otel-collector:4318/v1/traces); sin ella no se exporta nada.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+        # Duración del matching (@Observed en FleetAllocationService): percentiles en el dashboard.
+        truckcar.allocation.matching: true
+  tracing:
+    sampling:
+      probability: ${TRUCKCAR_TRACING_SAMPLING_PROBABILITY:1.0}
+    baggage:
+      # X-Correlation-Id (lo genera el api-gateway) viaja como cabecera propia en HTTP y en Kafka y se copia al MDC.
+      remote-fields: X-Correlation-Id
+      correlation:
+        fields: X-Correlation-Id
+
+logging:
+  # [servicio,traceId,spanId] en cada línea de log y, en las peticiones que lo traen, el X-Correlation-Id.
+  include-application-name: false
+  pattern:
+    correlation: "[${spring.application.name:},%X{traceId:-},%X{spanId:-}] [cid=%X{X-Correlation-Id:-}] "

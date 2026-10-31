@@ -14,6 +14,8 @@ import escuelaing.edu.co.truckcar.fleet_allocation.model.AllocationDecision;
 import escuelaing.edu.co.truckcar.fleet_allocation.model.AllocationStatus;
 import escuelaing.edu.co.truckcar.fleet_allocation.repository.AllocationDecisionRepository;
 import escuelaing.edu.co.truckcar.fleet_allocation.service.algorithm.FleetScoringOptimizer;
+import io.micrometer.core.instrument.Metrics;
+import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -100,9 +102,13 @@ public class FleetAllocationService implements IFleetAllocationService {
                 .build();
     }
 
+    /** Span y métrica truckcar_allocation_matching_seconds (duración del matching automático de una carga). */
     @Override
     @Transactional
+    @Observed(name = "truckcar.allocation.matching", contextualName = "allocation matching",
+            lowCardinalityKeyValues = {"trigger", "load.published"})
     public AllocationResultResponse processAutomaticAllocationForLoad(Long loadId, UUID correlationId) {
+        countAiRequest();
         Optional<FreightLoadDto> load;
         Optional<List<AvailableTruckDto>> availableTrucks;
         try {
@@ -162,8 +168,11 @@ public class FleetAllocationService implements IFleetAllocationService {
 
     @Override
     @Transactional
+    @Observed(name = "truckcar.allocation.matching", contextualName = "allocation rematching",
+            lowCardinalityKeyValues = {"trigger", "reallocation"})
     public AllocationResultResponse processAutomaticReallocationForLoad(Long loadId, Set<String> excludedDriverIds,
                                                                         String trigger, UUID correlationId) {
+        countAiRequest();
         Set<String> excluded = excludedDriverIds == null ? Set.of() : excludedDriverIds;
         Optional<FreightLoadDto> load;
         Optional<List<AvailableTruckDto>> availableTrucks;
@@ -380,6 +389,8 @@ public class FleetAllocationService implements IFleetAllocationService {
         String reason = "Servicios vecinos no disponibles (" + cause.getClass().getSimpleName()
                 + "); la carga queda en espera para reintento";
         log.warn("Matching de la carga #{} aplazado: {}: {}", loadId, reason, cause.getMessage());
+        Metrics.counter("truckcar.ai.fallback", "component", "fleet-matching",
+                "reason", cause.getClass().getSimpleName()).increment();
         AllocationDecision saved = repository.save(AllocationDecision.builder()
                 .loadId(loadId)
                 .status(AllocationStatus.NO_DRIVERS_AVAILABLE)
@@ -395,6 +406,11 @@ public class FleetAllocationService implements IFleetAllocationService {
                 .reasonDetails(reason)
                 .executedAt(saved.getExecutedAt())
                 .build();
+    }
+
+    /** Denominador de la tasa de fallbacks del dashboard: truckcar_ai_fallback_total / truckcar_ai_requests_total. */
+    private static void countAiRequest() {
+        Metrics.counter("truckcar.ai.requests", "component", "fleet-matching").increment();
     }
 
     private AllocationResultResponse pendingRecommendation(Long loadId, String reason) {
