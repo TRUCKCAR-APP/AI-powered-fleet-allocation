@@ -48,7 +48,7 @@ class FleetAllocationReallocationTest {
         optimizer = mock(FleetScoringOptimizer.class);
         restClient = mock(RestClient.class, RETURNS_DEEP_STUBS);
         kafkaTemplate = mock(KafkaTemplate.class);
-        service = new FleetAllocationService(repository, optimizer, restClient, kafkaTemplate);
+        service = new FleetAllocationService(repository, optimizer, restClient, kafkaTemplate, new NeighborServiceCalls());
 
         when(restClient.get().uri(anyString()).retrieve().body(FreightLoadDto.class))
                 .thenReturn(FreightLoadDto.builder().id(42L).weightTons(20.0).build());
@@ -93,6 +93,35 @@ class FleetAllocationReallocationTest {
         EventEnvelope<?> envelope = publishedEnvelope();
         assertThat(envelope.getEventType()).isEqualTo("agent.no.candidates");
         assertThat(envelope.getCorrelationId()).isEqualTo(CORRELATION_ID);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void unavailableFleetServiceFallsBackToNoCandidatesInsteadOfThrowing() {
+        when(restClient.get().uri(anyString()).retrieve().body(any(ParameterizedTypeReference.class)))
+                .thenThrow(new org.springframework.web.client.ResourceAccessException("Read timed out"));
+
+        AllocationResultResponse result = service.processAutomaticAllocationForLoad(42L, CORRELATION_ID);
+
+        // noCandidatesAvailable: la carga queda en espera (UNASSIGNED_NO_DRIVERS en Load-Allocation) sin bloquear Kafka.
+        assertThat(result.getStatus()).isEqualTo(AllocationStatus.NO_DRIVERS_AVAILABLE);
+        assertThat(result.getReasonDetails()).contains("Servicios vecinos no disponibles");
+        EventEnvelope<?> envelope = publishedEnvelope();
+        assertThat(envelope.getEventType()).isEqualTo("agent.no.candidates");
+        assertThat(envelope.getCorrelationId()).isEqualTo(CORRELATION_ID);
+    }
+
+    @Test
+    void missingLoadStaysPendingWithoutPublishing() {
+        when(restClient.get().uri(anyString()).retrieve().body(FreightLoadDto.class))
+                .thenThrow(org.springframework.web.client.HttpClientErrorException.create(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Not Found",
+                        org.springframework.http.HttpHeaders.EMPTY, new byte[0], null));
+
+        AllocationResultResponse result = service.processAutomaticAllocationForLoad(42L, CORRELATION_ID);
+
+        assertThat(result.getStatus()).isEqualTo(AllocationStatus.RECOMMENDATION_PENDING);
+        verify(kafkaTemplate, Mockito.never()).send(Mockito.<String>any(), any(), any());
     }
 
     private EventEnvelope<?> publishedEnvelope() {

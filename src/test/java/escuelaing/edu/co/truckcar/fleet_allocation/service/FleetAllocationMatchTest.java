@@ -48,7 +48,7 @@ class FleetAllocationMatchTest {
         repository = mock(AllocationDecisionRepository.class);
         optimizer = mock(FleetScoringOptimizer.class);
         restClient = mock(RestClient.class, RETURNS_DEEP_STUBS);
-        service = new FleetAllocationService(repository, optimizer, restClient, mock(KafkaTemplate.class));
+        service = new FleetAllocationService(repository, optimizer, restClient, mock(KafkaTemplate.class), new NeighborServiceCalls());
 
         when(restClient.get().uri(anyString()).retrieve().body(any(ParameterizedTypeReference.class)))
                 .thenReturn(List.of(state("driver-old"), state("driver-new")));

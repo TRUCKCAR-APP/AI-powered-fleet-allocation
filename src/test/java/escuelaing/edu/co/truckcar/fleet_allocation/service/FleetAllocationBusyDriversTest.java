@@ -40,7 +40,7 @@ class FleetAllocationBusyDriversTest {
         AllocationDecisionRepository repository = mock(AllocationDecisionRepository.class);
         restClient = mock(RestClient.class, RETURNS_DEEP_STUBS);
         service = new FleetAllocationService(repository,
-                new FleetScoringOptimizer(new HaversineDistanceCalculator()), restClient, mock(KafkaTemplate.class));
+                new FleetScoringOptimizer(new HaversineDistanceCalculator()), restClient, mock(KafkaTemplate.class), new NeighborServiceCalls());
 
         when(restClient.get().uri(anyString()).retrieve().body(FreightLoadDto.class))
                 .thenReturn(FreightLoadDto.builder().id(42L).weightTons(30.0).requiredTruckType("TRACTOMULA_3S3")

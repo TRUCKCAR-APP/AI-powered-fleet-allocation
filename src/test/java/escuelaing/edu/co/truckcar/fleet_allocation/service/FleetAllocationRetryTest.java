@@ -43,7 +43,7 @@ class FleetAllocationRetryTest {
         repository = mock(AllocationDecisionRepository.class);
         restClient = mock(RestClient.class, RETURNS_DEEP_STUBS);
         service = new FleetAllocationService(repository,
-                new FleetScoringOptimizer(new HaversineDistanceCalculator()), restClient, mock(KafkaTemplate.class));
+                new FleetScoringOptimizer(new HaversineDistanceCalculator()), restClient, mock(KafkaTemplate.class), new NeighborServiceCalls());
         when(repository.save(any(AllocationDecision.class))).thenAnswer(invocation -> {
             AllocationDecision decision = invocation.getArgument(0);
             decision.setId(9L);

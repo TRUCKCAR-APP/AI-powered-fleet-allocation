@@ -33,6 +33,51 @@ truckcar:
       load-events: truckcar.events.load-allocation
       vehicle-status: truckcar.events.vehicle-status
 
+  # Timeouts HTTP hacia fleets-drivers y Load-Allocation (RestClientConfig).
+  http:
+    connect-timeout: 2s
+    read-timeout: 4s
+
+# Llamadas a los servicios vecinos (NeighborServiceCalls). Un 4xx no es una falla de disponibilidad: no abre el
+# circuito ni se reintenta. Con el circuito abierto se aplica el fallback noCandidatesAvailable sin esperar.
+resilience4j:
+  circuitbreaker:
+    configs:
+      neighbor:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        slow-call-duration-threshold: 3s
+        slow-call-rate-threshold: 80
+        wait-duration-in-open-state: 20s
+        permitted-number-of-calls-in-half-open-state: 2
+        automatic-transition-from-open-to-half-open-enabled: true
+        ignore-exceptions:
+          - org.springframework.web.client.HttpClientErrorException
+    instances:
+      fleetsDrivers:
+        base-config: neighbor
+      loadAllocation:
+        base-config: neighbor
+  retry:
+    configs:
+      neighbor:
+        max-attempts: 3
+        wait-duration: 300ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        enable-randomized-wait: true
+        randomized-wait-factor: 0.5
+        retry-exceptions:
+          - org.springframework.web.client.ResourceAccessException
+          - org.springframework.web.client.HttpServerErrorException
+    instances:
+      fleetsDrivers:
+        base-config: neighbor
+      loadAllocation:
+        base-config: neighbor
+
 services:
   load-allocation:
     url: http://localhost:8083
