@@ -74,7 +74,7 @@ public class FleetAllocationService implements IFleetAllocationService {
 
         List<AllocationCandidateResponse> evaluatedList = candidates.stream()
                 .map(truck -> optimizer.evaluateTruck(truck, load))
-                .sorted(Comparator.comparing(AllocationCandidateResponse::getScore).reversed())
+                .sorted(FleetScoringOptimizer.RANKING)
                 .collect(Collectors.toList());
 
         AllocationCandidateResponse bestCandidate = evaluatedList.stream()
@@ -190,7 +190,7 @@ public class FleetAllocationService implements IFleetAllocationService {
         List<AllocationCandidateResponse> evaluatedList = availableTrucks.get().stream()
                 .filter(truck -> !excluded.contains(truck.getDriverId()))
                 .map(truck -> optimizer.evaluateTruck(truck, load.get()))
-                .sorted(Comparator.comparing(AllocationCandidateResponse::getScore).reversed())
+                .sorted(FleetScoringOptimizer.RANKING)
                 .collect(Collectors.toList());
         AllocationCandidateResponse nextCandidate = evaluatedList.stream()
                 .filter(AllocationCandidateResponse::getEligible)

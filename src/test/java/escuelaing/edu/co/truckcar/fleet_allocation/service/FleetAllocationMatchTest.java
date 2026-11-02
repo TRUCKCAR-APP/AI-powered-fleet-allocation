@@ -131,7 +131,7 @@ class FleetAllocationMatchTest {
                 .driverName(driverId)
                 .vehiclePlate("PL-" + driverId)
                 .vehicleType("TRACTOMULA_3S3")
-                .netCargoWeightTons(34.0)
+                .maxPayloadTons(34.0).netCargoWeightTons(0.0)
                 .status("ACTIVO")
                 .build();
     }

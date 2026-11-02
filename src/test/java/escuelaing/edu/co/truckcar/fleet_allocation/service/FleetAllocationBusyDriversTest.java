@@ -75,7 +75,7 @@ class FleetAllocationBusyDriversTest {
     private FleetDriverStateDto driver(String id, double latitude) {
         return FleetDriverStateDto.builder()
                 .driverId(id).driverName(id).vehiclePlate("PL-" + id).vehicleType("TRACTOMULA_3S3")
-                .netCargoWeightTons(34.0).rating(4.5).status("ACTIVO")
+                .maxPayloadTons(34.0).netCargoWeightTons(0.0).rating(4.5).status("ACTIVO")
                 .currentLatitude(latitude).currentLongitude(-74.08)
                 .build();
     }

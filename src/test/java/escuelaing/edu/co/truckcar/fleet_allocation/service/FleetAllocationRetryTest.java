@@ -82,7 +82,7 @@ class FleetAllocationRetryTest {
 
     private static FleetDriverStateDto truck(String id) {
         return FleetDriverStateDto.builder().driverId(id).driverName(id).vehiclePlate("PL-" + id)
-                .vehicleType("TRACTOMULA_3S3").netCargoWeightTons(34.0).rating(4.5).status("ACTIVO")
+                .vehicleType("TRACTOMULA_3S3").maxPayloadTons(34.0).netCargoWeightTons(0.0).rating(4.5).status("ACTIVO")
                 .currentLatitude(4.6).currentLongitude(-74.08).build();
     }
 

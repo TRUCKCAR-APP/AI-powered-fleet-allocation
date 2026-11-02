@@ -59,8 +59,8 @@ public class GlobalExceptionHandler {
         Map<String, Object> error = new HashMap<>();
         error.put("timestamp", LocalDateTime.now());
         error.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-        error.put("error", ex.getClass().getSimpleName());
-        error.put("message", ex.getMessage());
+        error.put("error", "Error interno");
+        error.put("message", "No se pudo procesar la solicitud de la asignación de flota");
         return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
