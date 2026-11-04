@@ -105,6 +105,17 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # Amazon ECR (AWS Academy Learner Lab): la misma imagen como truckcar/ai-fleet-allocation:<commit> y :main. Las credenciales
+  # temporales del laboratorio son secretos de la organización; sin ellas el job no publica (aviso, sin error).
+  ecr:
+    name: Imagen en Amazon ECR
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: TRUCKCAR-APP/Deployment-Infrastructure/.github/workflows/ecr-image.yml@main
+    with:
+      image: ai-fleet-allocation
+    secrets: inherit
+
   platform:
     name: Plataforma
     needs: verify
