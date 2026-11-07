@@ -141,7 +141,7 @@ class FleetAllocationReallocationTest {
     }
 
     private FleetDriverStateDto state(String driverId, String status, boolean restRequired) {
-        return FleetDriverStateDto.builder()
+        return FleetDriverStateDto.builder().accountVerified(true)
                 .driverId(driverId)
                 .vehiclePlate("PL-" + driverId)
                 .vehicleType("TRACTOMULA_3S3")

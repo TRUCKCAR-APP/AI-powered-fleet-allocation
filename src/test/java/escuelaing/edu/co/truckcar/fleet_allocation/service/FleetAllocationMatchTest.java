@@ -126,7 +126,7 @@ class FleetAllocationMatchTest {
     }
 
     private FleetDriverStateDto state(String driverId) {
-        return FleetDriverStateDto.builder()
+        return FleetDriverStateDto.builder().accountVerified(true)
                 .driverId(driverId)
                 .driverName(driverId)
                 .vehiclePlate("PL-" + driverId)

@@ -19,8 +19,21 @@ class FleetScoringOptimizerTest {
             .requiredTruckType("TRACTOMULA_3S3").originLatitude(4.6486).originLongitude(-74.1481).build();
 
     private static FleetDriverStateDto.FleetDriverStateDtoBuilder state(String id) {
-        return FleetDriverStateDto.builder().driverId(id).driverName(id).vehiclePlate("PL-" + id).vehicleType("TRACTOMULA_3S3")
+        return FleetDriverStateDto.builder().accountVerified(true).driverId(id).driverName(id).vehiclePlate("PL-" + id).vehicleType("TRACTOMULA_3S3")
                 .rating(4.5).status("ACTIVO").currentLatitude(4.6486).currentLongitude(-74.1481);
+    }
+
+    @Test
+    void anUnverifiedAccountIsNeverEligibleAndTheReasonSaysWhy() {
+        AvailableTruckDto pending = state("nuevo").accountVerified(false).maxPayloadTons(34.0).build().toAvailableTruck();
+        AvailableTruckDto unknown = state("sin-dato").accountVerified(null).maxPayloadTons(34.0).build().toAvailableTruck();
+
+        for (AvailableTruckDto truck : java.util.List.of(pending, unknown)) {
+            AllocationCandidateResponse result = optimizer.evaluateTruck(truck, LOAD);
+            assertThat(result.getEligible()).isFalse();
+            assertThat(result.getScore()).isZero();
+            assertThat(result.getReason()).contains("sin verificar");
+        }
     }
 
     @Test

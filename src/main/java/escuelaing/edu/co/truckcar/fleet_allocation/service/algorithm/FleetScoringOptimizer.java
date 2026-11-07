@@ -34,6 +34,11 @@ public class FleetScoringOptimizer {
                     .build();
         }
 
+        // Regla estricta: sin verificación explícita (también si fleets-drivers no la informa) no hay carga.
+        if (!Boolean.TRUE.equals(truck.getAccountVerified())) {
+            return ineligible(truck, "Cuenta del conductor sin verificar: un administrador debe verificarla en la torre de control");
+        }
+
         if (Boolean.FALSE.equals(truck.getRuntValid())) {
             return ineligible(truck, "RUNT no vigente: el vehículo no puede recibir cargas");
         }

@@ -73,7 +73,7 @@ class FleetAllocationBusyDriversTest {
 
     /** Todos idénticos salvo la distancia: el más cercano gana si está libre. */
     private FleetDriverStateDto driver(String id, double latitude) {
-        return FleetDriverStateDto.builder()
+        return FleetDriverStateDto.builder().accountVerified(true)
                 .driverId(id).driverName(id).vehiclePlate("PL-" + id).vehicleType("TRACTOMULA_3S3")
                 .maxPayloadTons(34.0).netCargoWeightTons(0.0).rating(4.5).status("ACTIVO")
                 .currentLatitude(latitude).currentLongitude(-74.08)

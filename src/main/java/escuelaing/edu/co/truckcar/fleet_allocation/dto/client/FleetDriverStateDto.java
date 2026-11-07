@@ -35,6 +35,8 @@ public class FleetDriverStateDto {
     private boolean onTrip;
     private Long currentLoadId;
     private String currentLoadStatus;
+    /** fleets-drivers: true solo si la cuenta del conductor está verificada (ACTIVE en user-identity). */
+    private Boolean accountVerified;
 
     public boolean isAvailableForAllocation() {
         return "ACTIVO".equalsIgnoreCase(status) && !restRequiredAlert;
@@ -65,6 +67,7 @@ public class FleetDriverStateDto {
                 .currentLatitude(currentLatitude)
                 .currentLongitude(currentLongitude)
                 .isAvailable(isAvailableForAllocation())
+                .accountVerified(accountVerified)
                 .busyReason(onTrip ? "Conductor ocupado con la carga #" + currentLoadId + " (" + currentLoadStatus + ")" : null)
                 .build();
     }
