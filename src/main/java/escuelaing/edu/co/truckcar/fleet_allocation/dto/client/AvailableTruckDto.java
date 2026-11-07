@@ -25,4 +25,6 @@ public class AvailableTruckDto {
     private Boolean isAvailable;
     /** Si no es null, el conductor ya tiene una carga activa o una propuesta vigente y no es elegible. */
     private String busyReason;
+    /** Cuenta verificada por un administrador en user-identity (fleets-drivers accountVerified). */
+    private Boolean accountVerified;
 }
