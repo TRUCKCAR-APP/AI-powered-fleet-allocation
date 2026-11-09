@@ -79,6 +79,9 @@ class FleetAllocationRouteFilterTest {
         assertThat(rejected.getEligible()).isFalse();
         assertThat(rejected.getScore()).isZero();
         assertThat(rejected.getReason()).isEqualTo(REASON);
+        assertThat(result.getExplanation())
+                .startsWith("Asignado por algoritmo determinista (Cercanía + Capacidad + Calificación): BAJ-350 (Lejos)")
+                .contains("Candidato ALT-410 (Cerca) descartado por gálibo/peso en la ruta (Límite: 3,80 m, Vehículo: 4,10 m).");
     }
 
     @Test
@@ -97,5 +100,7 @@ class FleetAllocationRouteFilterTest {
         assertThat(result.getStatus()).isNotEqualTo(AllocationStatus.SUCCESSFUL);
         assertThat(result.getSelectedDriverId()).isNull();
         assertThat(result.getEvaluatedCandidates()).allSatisfy(c -> assertThat(c.getReason()).isEqualTo(REASON));
+        assertThat(result.getExplanation()).startsWith("Sin asignación: ningún candidato elegible entre 2 evaluados.")
+                .contains("Candidato ALT-410 (Cerca) descartado por gálibo", "Candidato BAJ-350 (Lejos) descartado por gálibo");
     }
 }
