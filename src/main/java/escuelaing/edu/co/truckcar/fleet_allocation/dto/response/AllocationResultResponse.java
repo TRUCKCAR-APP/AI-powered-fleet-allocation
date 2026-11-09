@@ -23,6 +23,8 @@ public class AllocationResultResponse {
     private Double matchingScore;
     private Double deadheadDistanceKm;
     private String reasonDetails;
+    /** Por qué se eligió a este conductor y por qué se descartó a los demás, en lenguaje claro. */
+    private String explanation;
     private List<AllocationCandidateResponse> evaluatedCandidates;
     private LocalDateTime executedAt;
 }

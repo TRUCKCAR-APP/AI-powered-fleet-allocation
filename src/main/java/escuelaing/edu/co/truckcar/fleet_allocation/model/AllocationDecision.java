@@ -46,6 +46,10 @@ public class AllocationDecision {
     @Column(name = "reason_details", length = 1000)
     private String reasonDetails;
 
+    /** Síntesis en lenguaje claro para la torre de control (ver DecisionExplanation). */
+    @Column(name = "decision_explanation", length = 2000)
+    private String explanation;
+
     @Column(name = "evaluated_candidates_count")
     private Integer evaluatedCandidatesCount;
 

@@ -13,6 +13,7 @@ import escuelaing.edu.co.truckcar.fleet_allocation.dto.response.AllocationResult
 import escuelaing.edu.co.truckcar.fleet_allocation.model.AllocationDecision;
 import escuelaing.edu.co.truckcar.fleet_allocation.model.AllocationStatus;
 import escuelaing.edu.co.truckcar.fleet_allocation.repository.AllocationDecisionRepository;
+import escuelaing.edu.co.truckcar.fleet_allocation.service.algorithm.DecisionExplanation;
 import escuelaing.edu.co.truckcar.fleet_allocation.service.algorithm.FleetScoringOptimizer;
 import escuelaing.edu.co.truckcar.fleet_allocation.service.route.RouteRestrictionScreen;
 import io.micrometer.core.instrument.Metrics;
@@ -57,6 +58,9 @@ public class FleetAllocationService implements IFleetAllocationService {
     /** Estados de asignación de una carga AVAILABLE que espera conductor (además de null: nunca propuesta). */
     private static final Set<String> WAITING_ASSIGNMENT_STATUSES = Set.of("UNASSIGNED_NO_DRIVERS");
 
+    static final String UNAVAILABLE_EXPLANATION = "Sin asignación por ahora: los servicios de flota o de cargas no respondieron; "
+            + "la carga queda en espera y el motor la reintenta automáticamente.";
+
     @Value("${truckcar.allocation.retry-batch-size:20}")
     private int retryBatchSize = 20;
 
@@ -86,7 +90,7 @@ public class FleetAllocationService implements IFleetAllocationService {
                 .findFirst()
                 .orElse(null);
 
-        AllocationDecision decision = buildDecisionEntity(load.getId(), bestCandidate, evaluatedList.size());
+        AllocationDecision decision = buildDecisionEntity(load.getId(), bestCandidate, evaluatedList);
         AllocationDecision saved = repository.save(decision);
 
         publishAllocationKafkaEvent(saved);
@@ -101,6 +105,7 @@ public class FleetAllocationService implements IFleetAllocationService {
                 .matchingScore(saved.getMatchingScore())
                 .deadheadDistanceKm(saved.getDeadheadDistanceKm())
                 .reasonDetails(saved.getReasonDetails())
+                .explanation(saved.getExplanation())
                 .evaluatedCandidates(evaluatedList)
                 .executedAt(saved.getExecutedAt())
                 .build();
@@ -203,7 +208,7 @@ public class FleetAllocationService implements IFleetAllocationService {
                 .filter(AllocationCandidateResponse::getEligible)
                 .findFirst()
                 .orElse(null);
-        AllocationDecision saved = repository.save(buildDecisionEntity(loadId, nextCandidate, evaluatedList.size()));
+        AllocationDecision saved = repository.save(buildDecisionEntity(loadId, nextCandidate, evaluatedList));
 
         if (nextCandidate == null) {
             publishNoCandidatesEvent(saved, excluded, trigger, correlationId);
@@ -212,6 +217,7 @@ public class FleetAllocationService implements IFleetAllocationService {
                     .loadId(loadId)
                     .status(AllocationStatus.NO_DRIVERS_AVAILABLE)
                     .reasonDetails("No hay candidatos elegibles después de excluir a los conductores " + excluded)
+                    .explanation(saved.getExplanation())
                     .evaluatedCandidates(evaluatedList)
                     .executedAt(saved.getExecutedAt())
                     .build();
@@ -228,6 +234,7 @@ public class FleetAllocationService implements IFleetAllocationService {
                 .matchingScore(nextCandidate.getScore())
                 .deadheadDistanceKm(nextCandidate.getDeadheadDistanceKm())
                 .reasonDetails(nextCandidate.getReason())
+                .explanation(saved.getExplanation())
                 .evaluatedCandidates(evaluatedList)
                 .executedAt(saved.getExecutedAt())
                 .build();
@@ -316,6 +323,7 @@ public class FleetAllocationService implements IFleetAllocationService {
                         .matchingScore(d.getMatchingScore())
                         .deadheadDistanceKm(d.getDeadheadDistanceKm())
                         .reasonDetails(d.getReasonDetails())
+                        .explanation(d.getExplanation())
                         .executedAt(d.getExecutedAt())
                         .build())
                 .collect(Collectors.toList());
@@ -406,6 +414,7 @@ public class FleetAllocationService implements IFleetAllocationService {
                 .status(AllocationStatus.NO_DRIVERS_AVAILABLE)
                 .reasonDetails(reason.length() > 250 ? reason.substring(0, 250) : reason)
                 .evaluatedCandidatesCount(0)
+                .explanation(UNAVAILABLE_EXPLANATION)
                 .executedAt(LocalDateTime.now())
                 .build());
         publishNoCandidatesEvent(saved, excludedDriverIds, trigger, correlationId);
@@ -414,6 +423,7 @@ public class FleetAllocationService implements IFleetAllocationService {
                 .loadId(loadId)
                 .status(AllocationStatus.NO_DRIVERS_AVAILABLE)
                 .reasonDetails(reason)
+                .explanation(saved.getExplanation())
                 .executedAt(saved.getExecutedAt())
                 .build();
     }
@@ -478,7 +488,10 @@ public class FleetAllocationService implements IFleetAllocationService {
         return matcher.find() ? matcher.group(1) : body;
     }
 
-    private AllocationDecision buildDecisionEntity(Long loadId, AllocationCandidateResponse bestCandidate, int candidatesCount) {
+    private AllocationDecision buildDecisionEntity(Long loadId, AllocationCandidateResponse bestCandidate,
+                                                   List<AllocationCandidateResponse> evaluated) {
+        int candidatesCount = evaluated.size();
+        String explanation = DecisionExplanation.of(bestCandidate, evaluated);
         if (bestCandidate != null) {
             return AllocationDecision.builder()
                     .loadId(loadId)
@@ -490,6 +503,7 @@ public class FleetAllocationService implements IFleetAllocationService {
                     .status(AllocationStatus.SUCCESSFUL)
                     .reasonDetails(bestCandidate.getReason())
                     .evaluatedCandidatesCount(candidatesCount)
+                    .explanation(explanation)
                     .executedAt(LocalDateTime.now())
                     .build();
         } else {
@@ -498,6 +512,7 @@ public class FleetAllocationService implements IFleetAllocationService {
                     .status(AllocationStatus.NO_DRIVERS_AVAILABLE)
                     .reasonDetails("Ningún vehículo cumplió los requisitos de capacidad, tipo o distancia máxima")
                     .evaluatedCandidatesCount(candidatesCount)
+                    .explanation(explanation)
                     .executedAt(LocalDateTime.now())
                     .build();
         }
