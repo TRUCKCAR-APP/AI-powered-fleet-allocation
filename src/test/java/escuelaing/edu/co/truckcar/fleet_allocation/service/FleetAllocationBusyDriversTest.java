@@ -1,5 +1,7 @@
 package escuelaing.edu.co.truckcar.fleet_allocation.service;
 
+import escuelaing.edu.co.truckcar.fleet_allocation.service.route.RouteRestrictionScreen;
+
 import escuelaing.edu.co.truckcar.fleet_allocation.dto.client.DriverCommitmentDto;
 import escuelaing.edu.co.truckcar.fleet_allocation.dto.client.FleetDriverStateDto;
 import escuelaing.edu.co.truckcar.fleet_allocation.dto.client.FreightLoadDto;
@@ -40,7 +42,8 @@ class FleetAllocationBusyDriversTest {
         AllocationDecisionRepository repository = mock(AllocationDecisionRepository.class);
         restClient = mock(RestClient.class, RETURNS_DEEP_STUBS);
         service = new FleetAllocationService(repository,
-                new FleetScoringOptimizer(new HaversineDistanceCalculator()), restClient, mock(KafkaTemplate.class), new NeighborServiceCalls());
+                new FleetScoringOptimizer(new HaversineDistanceCalculator()), restClient, mock(KafkaTemplate.class), new NeighborServiceCalls(),
+                RouteRestrictionScreen.disabled());
 
         when(restClient.get().uri(anyString()).retrieve().body(FreightLoadDto.class))
                 .thenReturn(FreightLoadDto.builder().id(42L).weightTons(30.0).requiredTruckType("TRACTOMULA_3S3")

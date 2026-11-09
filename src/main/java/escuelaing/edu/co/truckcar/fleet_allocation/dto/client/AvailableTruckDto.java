@@ -27,4 +27,10 @@ public class AvailableTruckDto {
     private String busyReason;
     /** Cuenta verificada por un administrador en user-identity (fleets-drivers accountVerified). */
     private Boolean accountVerified;
+    /** Altura total del camión (gálibo) y tara: con la carga a bordo dan lo que se valida contra la ruta. */
+    private Double heightMeters;
+    private Double tareWeightTons;
+    private Double onBoardTons;
+    /** Motivo de incompatibilidad con la ruta de la carga (gálibo o peso); null si es apta o no se pudo verificar. */
+    private String routeRestrictionReason;
 }

@@ -39,6 +39,11 @@ public class FleetScoringOptimizer {
             return ineligible(truck, "Cuenta del conductor sin verificar: un administrador debe verificarla en la torre de control");
         }
 
+        // Ninguna ruta entre el origen y el destino le sirve a este camión (gálibo o peso): RouteRestrictionScreen.
+        if (truck.getRouteRestrictionReason() != null) {
+            return ineligible(truck, truck.getRouteRestrictionReason());
+        }
+
         if (Boolean.FALSE.equals(truck.getRuntValid())) {
             return ineligible(truck, "RUNT no vigente: el vehículo no puede recibir cargas");
         }
