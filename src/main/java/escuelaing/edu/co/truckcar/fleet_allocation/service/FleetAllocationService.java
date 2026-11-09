@@ -14,6 +14,7 @@ import escuelaing.edu.co.truckcar.fleet_allocation.model.AllocationDecision;
 import escuelaing.edu.co.truckcar.fleet_allocation.model.AllocationStatus;
 import escuelaing.edu.co.truckcar.fleet_allocation.repository.AllocationDecisionRepository;
 import escuelaing.edu.co.truckcar.fleet_allocation.service.algorithm.FleetScoringOptimizer;
+import escuelaing.edu.co.truckcar.fleet_allocation.service.route.RouteRestrictionScreen;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.observation.annotation.Observed;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +51,8 @@ public class FleetAllocationService implements IFleetAllocationService {
     private final KafkaTemplate<String, Object> kafkaTemplate;
     /** CircuitBreaker + Retry de las llamadas a fleets-drivers y Load-Allocation. */
     private final NeighborServiceCalls neighborCalls;
+    /** Gálibo y peso de la ruta de la carga: descarta a los camiones que ninguna ruta admite. */
+    private final RouteRestrictionScreen routeRestrictions;
 
     /** Estados de asignación de una carga AVAILABLE que espera conductor (además de null: nunca propuesta). */
     private static final Set<String> WAITING_ASSIGNMENT_STATUSES = Set.of("UNASSIGNED_NO_DRIVERS");
@@ -71,6 +74,7 @@ public class FleetAllocationService implements IFleetAllocationService {
     public AllocationResultResponse processManualOptimization(ManualAllocationRequest request) {
         FreightLoadDto load = request.getLoad();
         List<AvailableTruckDto> candidates = request.getCandidateTrucks();
+        routeRestrictions.annotate(load, candidates);
 
         List<AllocationCandidateResponse> evaluatedList = candidates.stream()
                 .map(truck -> optimizer.evaluateTruck(truck, load))
@@ -187,8 +191,11 @@ public class FleetAllocationService implements IFleetAllocationService {
             return noCandidatesAvailable(loadId, excluded, trigger, correlationId, unavailable);
         }
 
-        List<AllocationCandidateResponse> evaluatedList = availableTrucks.get().stream()
+        List<AvailableTruckDto> candidates = availableTrucks.get().stream()
                 .filter(truck -> !excluded.contains(truck.getDriverId()))
+                .collect(Collectors.toList());
+        routeRestrictions.annotate(load.get(), candidates);
+        List<AllocationCandidateResponse> evaluatedList = candidates.stream()
                 .map(truck -> optimizer.evaluateTruck(truck, load.get()))
                 .sorted(FleetScoringOptimizer.RANKING)
                 .collect(Collectors.toList());
@@ -286,8 +293,11 @@ public class FleetAllocationService implements IFleetAllocationService {
     private boolean hasEligibleCandidate(FreightLoadDto load, List<AvailableTruckDto> fleet) {
         Set<String> discarded = load.getDiscardedDriverIds() == null
                 ? Set.of() : Set.copyOf(load.getDiscardedDriverIds());
-        return fleet.stream()
+        List<AvailableTruckDto> candidates = fleet.stream()
                 .filter(truck -> !discarded.contains(truck.getDriverId()))
+                .collect(Collectors.toList());
+        routeRestrictions.annotate(load, candidates);
+        return candidates.stream()
                 .map(truck -> optimizer.evaluateTruck(truck, load))
                 .anyMatch(AllocationCandidateResponse::getEligible);
     }

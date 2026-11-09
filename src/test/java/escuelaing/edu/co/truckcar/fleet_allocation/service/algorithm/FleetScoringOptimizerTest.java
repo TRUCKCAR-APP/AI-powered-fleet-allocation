@@ -37,6 +37,28 @@ class FleetScoringOptimizerTest {
     }
 
     @Test
+    void aTruckThatTheRouteRejectsIsNotEligibleAndKeepsTheReason() {
+        AvailableTruckDto tall = state("alto").maxPayloadTons(34.0).build().toAvailableTruck();
+        tall.setRouteRestrictionReason("Incompatible por gálibo/peso en la ruta (Límite: 3,80 m, Vehículo: 4,10 m)");
+
+        AllocationCandidateResponse result = optimizer.evaluateTruck(tall, LOAD);
+
+        assertThat(result.getEligible()).isFalse();
+        assertThat(result.getScore()).isZero();
+        assertThat(result.getReason()).isEqualTo("Incompatible por gálibo/peso en la ruta (Límite: 3,80 m, Vehículo: 4,10 m)");
+    }
+
+    @Test
+    void theVehicleDataNeededForTheRouteCheckComesFromFleetsDrivers() {
+        AvailableTruckDto truck = state("ana").maxPayloadTons(34.0).maxHeightMeters(4.1).tareWeightTons(15.0)
+                .netCargoWeightTons(2.0).build().toAvailableTruck();
+
+        assertThat(truck.getHeightMeters()).isEqualTo(4.1);
+        assertThat(truck.getTareWeightTons()).isEqualTo(15.0);
+        assertThat(truck.getOnBoardTons()).isEqualTo(2.0);
+    }
+
+    @Test
     void anEmptyTruckWithEnoughPayloadIsEligible() {
         // El caso que el motor descartaba siempre: vacío (0 t a bordo) con 34 t de capacidad.
         AvailableTruckDto empty = state("ana").maxPayloadTons(34.0).netCargoWeightTons(0.0).build().toAvailableTruck();

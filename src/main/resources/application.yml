@@ -52,6 +52,13 @@ truckcar:
     connect-timeout: 2s
     read-timeout: 4s
 
+  # Gálibo y peso de la ruta de la carga (OsrmRouteRestrictionScreen): rutas de OSRM validadas contra Routing-Restrictions.
+  # Si alguno no responde no se descarta a nadie por ruta (truckcar_ai_fallback_total{component="route-restrictions"}).
+  routing:
+    osrm-url: ${TRUCKCAR_OSRM_URL:https://router.project-osrm.org}
+  services:
+    routing-restrictions-url: ${TRUCKCAR_SERVICES_ROUTING_RESTRICTIONS_URL:http://localhost:8084}
+
 # Llamadas a los servicios vecinos (NeighborServiceCalls). Un 4xx no es una falla de disponibilidad: no abre el
 # circuito ni se reintenta. Con el circuito abierto se aplica el fallback noCandidatesAvailable sin esperar.
 resilience4j:

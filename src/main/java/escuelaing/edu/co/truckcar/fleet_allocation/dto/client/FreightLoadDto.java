@@ -20,6 +20,9 @@ public class FreightLoadDto {
     private String originCity;
     private Double originLatitude;
     private Double originLongitude;
+    /** Destino de la carga: con el origen, la ruta que se valida contra gálibo y peso. */
+    private Double destinationLatitude;
+    private Double destinationLongitude;
     private String destinationCity;
     private BigDecimal offeredBudget;
     private String status;

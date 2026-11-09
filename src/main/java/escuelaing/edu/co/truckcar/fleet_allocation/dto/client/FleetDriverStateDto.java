@@ -37,6 +37,9 @@ public class FleetDriverStateDto {
     private String currentLoadStatus;
     /** fleets-drivers: true solo si la cuenta del conductor está verificada (ACTIVE en user-identity). */
     private Boolean accountVerified;
+    /** Altura total y tara del vehículo registrado (gálibo y peso bruto de la ruta). */
+    private Double maxHeightMeters;
+    private Double tareWeightTons;
 
     public boolean isAvailableForAllocation() {
         return "ACTIVO".equalsIgnoreCase(status) && !restRequiredAlert;
@@ -68,6 +71,9 @@ public class FleetDriverStateDto {
                 .currentLongitude(currentLongitude)
                 .isAvailable(isAvailableForAllocation())
                 .accountVerified(accountVerified)
+                .heightMeters(maxHeightMeters)
+                .tareWeightTons(tareWeightTons)
+                .onBoardTons(netCargoWeightTons)
                 .busyReason(onTrip ? "Conductor ocupado con la carga #" + currentLoadId + " (" + currentLoadStatus + ")" : null)
                 .build();
     }

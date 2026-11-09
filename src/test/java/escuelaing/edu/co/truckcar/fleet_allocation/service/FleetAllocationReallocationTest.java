@@ -1,5 +1,7 @@
 package escuelaing.edu.co.truckcar.fleet_allocation.service;
 
+import escuelaing.edu.co.truckcar.fleet_allocation.service.route.RouteRestrictionScreen;
+
 import escuelaing.edu.co.truckcar.fleet_allocation.dto.client.AvailableTruckDto;
 import escuelaing.edu.co.truckcar.fleet_allocation.dto.client.FleetDriverStateDto;
 import escuelaing.edu.co.truckcar.fleet_allocation.dto.client.FreightLoadDto;
@@ -48,7 +50,8 @@ class FleetAllocationReallocationTest {
         optimizer = mock(FleetScoringOptimizer.class);
         restClient = mock(RestClient.class, RETURNS_DEEP_STUBS);
         kafkaTemplate = mock(KafkaTemplate.class);
-        service = new FleetAllocationService(repository, optimizer, restClient, kafkaTemplate, new NeighborServiceCalls());
+        service = new FleetAllocationService(repository, optimizer, restClient, kafkaTemplate, new NeighborServiceCalls(),
+                RouteRestrictionScreen.disabled());
 
         when(restClient.get().uri(anyString()).retrieve().body(FreightLoadDto.class))
                 .thenReturn(FreightLoadDto.builder().id(42L).weightTons(20.0).build());

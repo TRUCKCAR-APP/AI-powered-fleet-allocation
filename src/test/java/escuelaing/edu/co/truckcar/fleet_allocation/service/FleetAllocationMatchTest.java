@@ -1,5 +1,7 @@
 package escuelaing.edu.co.truckcar.fleet_allocation.service;
 
+import escuelaing.edu.co.truckcar.fleet_allocation.service.route.RouteRestrictionScreen;
+
 import escuelaing.edu.co.truckcar.fleet_allocation.dto.client.AvailableTruckDto;
 import escuelaing.edu.co.truckcar.fleet_allocation.dto.client.FleetDriverStateDto;
 import escuelaing.edu.co.truckcar.fleet_allocation.dto.client.FreightLoadDto;
@@ -48,7 +50,8 @@ class FleetAllocationMatchTest {
         repository = mock(AllocationDecisionRepository.class);
         optimizer = mock(FleetScoringOptimizer.class);
         restClient = mock(RestClient.class, RETURNS_DEEP_STUBS);
-        service = new FleetAllocationService(repository, optimizer, restClient, mock(KafkaTemplate.class), new NeighborServiceCalls());
+        service = new FleetAllocationService(repository, optimizer, restClient, mock(KafkaTemplate.class), new NeighborServiceCalls(),
+                RouteRestrictionScreen.disabled());
 
         when(restClient.get().uri(anyString()).retrieve().body(any(ParameterizedTypeReference.class)))
                 .thenReturn(List.of(state("driver-old"), state("driver-new")));
