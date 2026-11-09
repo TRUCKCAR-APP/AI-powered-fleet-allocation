@@ -41,6 +41,7 @@ class MulticriteriaAllocationVerificationTest {
                                                 double netCargo, double rating, boolean runtValid,
                                                 Boolean coldChain, String busyReason, double lat, double lon) {
         AvailableTruckDto truck = FleetDriverStateDto.builder()
+                .accountVerified(true)
                 .driverId(id)
                 .driverName("Conductor " + id)
                 .vehiclePlate(plate)
@@ -134,6 +135,13 @@ class MulticriteriaAllocationVerificationTest {
         AllocationCandidateResponse coldEval = optimizer.evaluateTruck(uncertified, coldLoad);
         assertThat(coldEval.getEligible()).isFalse();
         assertThat(coldEval.getReason()).contains("cadena de frío");
+
+        // 6. Cuenta del conductor sin verificar
+        AvailableTruckDto unverified = buildTruck("d-unverif", "PL-6", "REFRIGERADO", 20.0, 0.0, 4.9, true, true, null, BOGOTA_LAT, BOGOTA_LON);
+        unverified.setAccountVerified(false);
+        AllocationCandidateResponse unverifiedEval = optimizer.evaluateTruck(unverified, coldLoad);
+        assertThat(unverifiedEval.getEligible()).isFalse();
+        assertThat(unverifiedEval.getReason()).contains("sin verificar");
     }
 
     @Test
