@@ -145,6 +145,7 @@ public class FleetAllocationService implements IFleetAllocationService {
 
         AllocationResultResponse result = processManualOptimization(request);
         if (result.getStatus() != AllocationStatus.SUCCESSFUL) {
+            announceWaitingForDriver(result, discarded, correlationId);
             return result;
         }
 
@@ -153,7 +154,24 @@ public class FleetAllocationService implements IFleetAllocationService {
         if (confirmation.accepted()) {
             return result;
         }
-        return markDecisionNotApplied(result, confirmation);
+        AllocationResultResponse notApplied = markDecisionNotApplied(result, confirmation);
+        announceWaitingForDriver(notApplied, discarded, correlationId);
+        return notApplied;
+    }
+
+    /**
+     * La carga se queda sin propuesta (no hubo candidatos o Load-Allocation no aplicó la recomendación): se publica
+     * agent.no.candidates para que Load-Allocation la marque UNASSIGNED_NO_DRIVERS y el generador lo vea. Antes la
+     * primera asignación solo publicaba FleetAllocationCompletedEvent (sin sobre común), que Load-Allocation ignora, y
+     * la carga quedaba AVAILABLE sin estado de asignación. Si la carga ya tenía otra propuesta, Load-Allocation ignora
+     * el aviso (markNoDriversAvailable es idempotente); el reintento programado la vuelve a evaluar.
+     */
+    private void announceWaitingForDriver(AllocationResultResponse result, Set<String> discarded, UUID correlationId) {
+        if (result.getDecisionId() == null) {
+            return;
+        }
+        repository.findById(result.getDecisionId()).ifPresent(decision ->
+                publishNoCandidatesEvent(decision, discarded, "load.published", correlationId));
     }
 
     /**

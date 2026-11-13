@@ -3,6 +3,7 @@ package escuelaing.edu.co.truckcar.fleet_allocation.service;
 import escuelaing.edu.co.truckcar.fleet_allocation.service.route.RouteRestrictionScreen;
 
 import escuelaing.edu.co.truckcar.fleet_allocation.dto.client.AvailableTruckDto;
+import escuelaing.edu.co.truckcar.fleet_allocation.dto.event.EventEnvelope;
 import escuelaing.edu.co.truckcar.fleet_allocation.dto.client.FleetDriverStateDto;
 import escuelaing.edu.co.truckcar.fleet_allocation.dto.client.FreightLoadDto;
 import escuelaing.edu.co.truckcar.fleet_allocation.dto.response.AllocationCandidateResponse;
@@ -30,6 +31,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -43,6 +45,7 @@ class FleetAllocationMatchTest {
     private FleetAllocationService service;
     private AllocationDecision savedDecision;
     private RestClient.ResponseSpec patchResponse;
+    private KafkaTemplate<String, Object> kafka;
 
     @BeforeEach
     @SuppressWarnings("unchecked")
@@ -50,7 +53,8 @@ class FleetAllocationMatchTest {
         repository = mock(AllocationDecisionRepository.class);
         optimizer = mock(FleetScoringOptimizer.class);
         restClient = mock(RestClient.class, RETURNS_DEEP_STUBS);
-        service = new FleetAllocationService(repository, optimizer, restClient, mock(KafkaTemplate.class), new NeighborServiceCalls(),
+        kafka = mock(KafkaTemplate.class);
+        service = new FleetAllocationService(repository, optimizer, restClient, kafka, new NeighborServiceCalls(),
                 RouteRestrictionScreen.disabled());
 
         when(restClient.get().uri(anyString()).retrieve().body(any(ParameterizedTypeReference.class)))
@@ -111,6 +115,56 @@ class FleetAllocationMatchTest {
 
         assertThat(result.getStatus()).isEqualTo(AllocationStatus.ASSIGNMENT_FAILED);
         assertThat(savedDecision.getStatus()).isEqualTo(AllocationStatus.RECOMMENDATION_PENDING);
+    }
+
+    /**
+     * Bug HU2.1: sin candidatos en la primera asignación solo se publicaba FleetAllocationCompletedEvent (sin sobre),
+     * que Load-Allocation ignora, y la carga quedaba AVAILABLE sin estado de asignación para siempre.
+     */
+    @Test
+    void firstAllocationWithoutCandidatesAnnouncesNoCandidatesToLoadAllocation() {
+        givenLoad(List.of());
+        when(optimizer.evaluateTruck(any(AvailableTruckDto.class), any(FreightLoadDto.class)))
+                .thenAnswer(invocation -> AllocationCandidateResponse.builder()
+                        .driverId(((AvailableTruckDto) invocation.getArgument(0)).getDriverId())
+                        .eligible(false).score(0.0).build());
+
+        AllocationResultResponse result = service.processAutomaticAllocationForLoad(42L);
+
+        assertThat(result.getStatus()).isEqualTo(AllocationStatus.NO_DRIVERS_AVAILABLE);
+        assertThat(publishedEventTypes()).contains("agent.no.candidates");
+        verify(restClient, never()).patch();
+    }
+
+    @Test
+    void aConflictLeavesTheLoadWaitingAndAnnouncesIt() {
+        givenLoad(List.of());
+        when(patchResponse.toBodilessEntity())
+                .thenThrow(HttpClientErrorException.create(HttpStatus.CONFLICT, "Conflict", HttpHeaders.EMPTY,
+                        "{\"message\":\"El conductor driver-old está ocupado\"}".getBytes(StandardCharsets.UTF_8),
+                        StandardCharsets.UTF_8));
+
+        service.processAutomaticAllocationForLoad(42L);
+
+        assertThat(publishedEventTypes()).contains("agent.no.candidates");
+    }
+
+    @Test
+    void aConfirmedProposalDoesNotAnnounceNoCandidates() {
+        givenLoad(List.of());
+
+        service.processAutomaticAllocationForLoad(42L);
+
+        assertThat(publishedEventTypes()).doesNotContain("agent.no.candidates");
+    }
+
+    private List<String> publishedEventTypes() {
+        ArgumentCaptor<Object> sent = ArgumentCaptor.forClass(Object.class);
+        verify(kafka, org.mockito.Mockito.atLeast(0)).send(any(), anyString(), sent.capture());
+        return sent.getAllValues().stream()
+                .filter(EventEnvelope.class::isInstance)
+                .map(event -> ((EventEnvelope<?>) event).getEventType())
+                .toList();
     }
 
     private void givenLoad(List<String> discardedDriverIds) {

@@ -38,9 +38,6 @@ public class FreightLoadEventListener {
                         event.getPayload().getLoadId());
                 allocationService.processAutomaticAllocationForLoad(event.getPayload().getLoadId(),
                         event.getCorrelationId());
-            } else if ("load.assigned".equals(event.getEventType())) {
-                log.debug("Evento load.assigned ignorado para evitar reprocesar la carga #{}",
-                        event.getPayload() != null ? event.getPayload().getLoadId() : null);
             } else if (("assignment.rejected".equals(event.getEventType())
                     || "assignment.timeout".equals(event.getEventType()))
                     && event.getPayload() != null
