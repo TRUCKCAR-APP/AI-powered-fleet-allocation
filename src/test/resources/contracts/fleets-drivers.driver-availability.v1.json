@@ -1,0 +1,18 @@
+{
+  "eventId": "3b8f6c1e-2a4d-4e5f-9a0b-1c2d3e4f5a6b",
+  "eventType": "driver.availability.changed",
+  "occurredAt": "2026-11-16T18:00:00Z",
+  "correlationId": "7c6b5a49-3827-4615-9a8b-7c6d5e4f3a2b",
+  "version": 1,
+  "producer": "fleets-drivers",
+  "payload": {
+    "driverId": "ana",
+    "vehiclePlate": "TDK-410",
+    "latitude": 4.711,
+    "longitude": -74.0721,
+    "speedKmH": 60.0,
+    "remainingDrivingHours": 8.5,
+    "status": "ACTIVO",
+    "timestamp": "2026-11-16T13:00:00"
+  }
+}

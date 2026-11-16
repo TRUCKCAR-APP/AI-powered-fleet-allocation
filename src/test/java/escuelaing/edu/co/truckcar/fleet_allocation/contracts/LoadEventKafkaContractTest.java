@@ -73,14 +73,17 @@ class LoadEventKafkaContractTest {
                 eq("assignment.rejected"), any());
     }
 
+    /** Contrato con fleets-drivers: copia del fixture que fleets-drivers verifica contra su outbox, con campos extra. */
     @Test
-    void anAvailabilityEventFromFleetsDriversWithNewFieldsIsAccepted() {
-        assertThatCode(() -> new DriverAvailabilityEventListener(mapper).handleDriverAvailability("""
-                {"eventId":"%s","eventType":"driver.availability.changed","occurredAt":"2026-11-16T18:00:00Z",
-                 "correlationId":"%s","version":1,"producer":"fleets-drivers","nuevo":true,
-                 "payload":{"driverId":"ana","vehiclePlate":"TDK-410","status":"ACTIVO","drivingHoursToday":0.5,
-                            "remainingDrivingHours":8.5,"campoFuturo":"x"}}
-                """.formatted(UUID.randomUUID(), UUID.randomUUID()))).doesNotThrowAnyException();
+    void anAvailabilityEventFromFleetsDriversWithNewFieldsIsAccepted() throws Exception {
+        try (InputStream in = getClass().getResourceAsStream("/contracts/fleets-drivers.driver-availability.v1.json")) {
+            ObjectNode event = (ObjectNode) mapper.readTree(in);
+            event.put("nuevo", true);
+            ((ObjectNode) event.get("payload")).put("drivingHoursToday", 0.5).put("campoFuturo", "x");
+            String json = mapper.writeValueAsString(event);
+            assertThatCode(() -> new DriverAvailabilityEventListener(mapper).handleDriverAvailability(json))
+                    .doesNotThrowAnyException();
+        }
     }
 
     /** La misma cadena por un broker real, con la configuración de producción (StringDeserializer + JacksonConfig). */
