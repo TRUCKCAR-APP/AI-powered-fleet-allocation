@@ -43,6 +43,27 @@ class FreightLoadEventListenerTest {
                 42L, Set.of("driver-earlier", "driver-rejected"), "assignment.rejected", correlationId);
     }
 
+    /**
+     * Regresión: Load-Allocation agregó cancellationReason y proposedBy al payload, y el ObjectMapper de la aplicación
+     * (JacksonConfig, estricto) mandaba todos los eventos de carga a la cola de muertos: el motor dejó de proponer.
+     */
+    @Test
+    void fieldsAddedByLoadAllocationDoNotStopTheEngine() throws Exception {
+        IFleetAllocationService service = Mockito.mock(IFleetAllocationService.class);
+        ObjectMapper appMapper = new escuelaing.edu.co.truckcar.fleet_allocation.config.JacksonConfig().objectMapper();
+        FreightLoadEventListener listener = new FreightLoadEventListener(service, appMapper);
+        UUID correlationId = UUID.randomUUID();
+
+        listener.handleLoadPublished("""
+                {"eventId":"%s","eventType":"load.published","occurredAt":"2026-11-16T18:31:01Z","correlationId":"%s",
+                 "version":1,"producer":"load-allocation","campoNuevoDelSobre":"x",
+                 "payload":{"loadId":95,"weightTons":5.0,"requiredTruckType":"TURBO","loadStatus":"AVAILABLE",
+                            "excludedDriverIds":[],"cancellationReason":null,"proposedBy":null,"otroCampoFuturo":{"a":1}}}
+                """.formatted(UUID.randomUUID(), correlationId));
+
+        verify(service).processAutomaticAllocationForLoad(95L, correlationId);
+    }
+
     private static String event(ObjectMapper mapper, String type, String assignedDriverId) throws Exception {
         return mapper.writeValueAsString(EventEnvelope.<FreightLoadEventPayload>builder()
                 .eventId(UUID.randomUUID())
