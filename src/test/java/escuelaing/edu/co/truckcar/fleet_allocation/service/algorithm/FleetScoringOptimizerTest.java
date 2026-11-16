@@ -58,6 +58,30 @@ class FleetScoringOptimizerTest {
         assertThat(truck.getOnBoardTons()).isEqualTo(2.0);
     }
 
+    /** Lote 5: el puntaje se explica: cercanía (50 %), capacidad (30 %) y calificación (20 %) suman el total. */
+    @Test
+    void theScoreIsBrokenDownIntoItsThreeWeightedFactors() {
+        AvailableTruckDto here = state("ana").maxPayloadTons(30.0).netCargoWeightTons(0.0).rating(4.5).build().toAvailableTruck();
+
+        AllocationCandidateResponse r = optimizer.evaluateTruck(here, LOAD);
+
+        assertThat(r.getProximityPoints()).as("en el mismo punto de recogida: los 50 puntos").isEqualTo(50.0);
+        assertThat(r.getCapacityPoints()).as("24 de 30 t = 80 % de 30 puntos").isEqualTo(24.0);
+        assertThat(r.getRatingPoints()).as("4,5 de 5 = 90 % de 20 puntos").isEqualTo(18.0);
+        assertThat(r.getProximityPoints() + r.getCapacityPoints() + r.getRatingPoints())
+                .isCloseTo(r.getScore(), org.assertj.core.data.Offset.offset(0.2));
+    }
+
+    @Test
+    void anIneligibleTruckHasNoBreakdown() {
+        AvailableTruckDto small = state("chico").maxPayloadTons(10.0).build().toAvailableTruck();
+
+        AllocationCandidateResponse r = optimizer.evaluateTruck(small, LOAD);
+
+        assertThat(r.getEligible()).isFalse();
+        assertThat(r.getProximityPoints()).isNull();
+    }
+
     @Test
     void anEmptyTruckWithEnoughPayloadIsEligible() {
         // El caso que el motor descartaba siempre: vacío (0 t a bordo) con 34 t de capacidad.

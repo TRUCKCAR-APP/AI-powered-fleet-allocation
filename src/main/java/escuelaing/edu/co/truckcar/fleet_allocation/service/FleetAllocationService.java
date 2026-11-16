@@ -13,6 +13,7 @@ import escuelaing.edu.co.truckcar.fleet_allocation.dto.response.AllocationCandid
 import escuelaing.edu.co.truckcar.fleet_allocation.dto.response.AllocationResultResponse;
 import escuelaing.edu.co.truckcar.fleet_allocation.model.AllocationDecision;
 import escuelaing.edu.co.truckcar.fleet_allocation.model.AllocationStatus;
+import escuelaing.edu.co.truckcar.fleet_allocation.model.EvaluatedCandidate;
 import escuelaing.edu.co.truckcar.fleet_allocation.repository.AllocationDecisionRepository;
 import escuelaing.edu.co.truckcar.fleet_allocation.service.algorithm.DecisionExplanation;
 import escuelaing.edu.co.truckcar.fleet_allocation.service.algorithm.FleetScoringOptimizer;
@@ -59,7 +60,10 @@ public class FleetAllocationService implements IFleetAllocationService {
     /** Estados de asignación de una carga AVAILABLE que espera conductor (además de null: nunca propuesta). */
     private static final Set<String> WAITING_ASSIGNMENT_STATUSES = Set.of("UNASSIGNED_NO_DRIVERS");
 
-    static final String UNAVAILABLE_EXPLANATION = "Sin asignación por ahora: los servicios de flota o de cargas no respondieron; "
+    /** Tope de candidatos guardados por decisión: con flotas grandes basta el ranking de los primeros. */
+    static final int MAX_STORED_CANDIDATES = 50;
+
+    static final String UNAVAILABLE_EXPLANATION ="Sin asignación por ahora: los servicios de flota o de cargas no respondieron; "
             + "la carga queda en espera y el motor la reintenta automáticamente.";
 
     @Value("${truckcar.allocation.retry-batch-size:20}")
@@ -361,6 +365,7 @@ public class FleetAllocationService implements IFleetAllocationService {
                         .deadheadDistanceKm(d.getDeadheadDistanceKm())
                         .reasonDetails(d.getReasonDetails())
                         .explanation(d.getExplanation())
+                        .evaluatedCandidates(d.getCandidates().stream().map(EvaluatedCandidate::toResponse).toList())
                         .executedAt(d.getExecutedAt())
                         .build())
                 .collect(Collectors.toList());
@@ -529,6 +534,18 @@ public class FleetAllocationService implements IFleetAllocationService {
                                                    List<AllocationCandidateResponse> evaluated) {
         int candidatesCount = evaluated.size();
         String explanation = DecisionExplanation.of(bestCandidate, evaluated);
+        AllocationDecision decision = decisionFor(loadId, bestCandidate, candidatesCount, explanation);
+        // Se guardan en el orden del motor: GET /history los devuelve tal cual, con su desglose o motivo de descarte.
+        decision.setCandidates(evaluated.stream()
+                .sorted(FleetScoringOptimizer.RANKING)
+                .limit(MAX_STORED_CANDIDATES)
+                .map(EvaluatedCandidate::from)
+                .collect(Collectors.toCollection(java.util.ArrayList::new)));
+        return decision;
+    }
+
+    private AllocationDecision decisionFor(Long loadId, AllocationCandidateResponse bestCandidate, int candidatesCount,
+                                           String explanation) {
         if (bestCandidate != null) {
             return AllocationDecision.builder()
                     .loadId(loadId)

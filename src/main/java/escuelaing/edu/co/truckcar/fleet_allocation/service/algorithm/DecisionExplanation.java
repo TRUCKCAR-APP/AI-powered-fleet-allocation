@@ -27,6 +27,11 @@ public final class DecisionExplanation {
                     .append(label(selected));
             if (selected.getScore() != null) {
                 text.append(String.format(ES, ", puntaje %.2f", selected.getScore()));
+                if (selected.getProximityPoints() != null && selected.getCapacityPoints() != null
+                        && selected.getRatingPoints() != null) {
+                    text.append(String.format(ES, " (cercanía %.1f + capacidad %.1f + calificación %.1f)",
+                            selected.getProximityPoints(), selected.getCapacityPoints(), selected.getRatingPoints()));
+                }
             }
             if (selected.getDeadheadDistanceKm() != null) {
                 text.append(String.format(ES, ", a %.1f km de la recogida", selected.getDeadheadDistanceKm()));
