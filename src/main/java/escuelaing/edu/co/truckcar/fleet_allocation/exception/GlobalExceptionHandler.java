@@ -30,6 +30,11 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.UNPROCESSABLE_ENTITY);
     }
 
+    @ExceptionHandler(LoadNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleLoadNotFound(LoadNotFoundException ex) {
+        return clientError(HttpStatus.NOT_FOUND, "Carga no encontrada", ex.getMessage());
+    }
+
     @ExceptionHandler(AllocationAccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> handleAccessDenied(AllocationAccessDeniedException ex) {
         HttpStatus status = ex.isUnauthenticated() ? HttpStatus.UNAUTHORIZED : HttpStatus.FORBIDDEN;

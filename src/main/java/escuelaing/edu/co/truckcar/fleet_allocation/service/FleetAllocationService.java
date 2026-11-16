@@ -1,5 +1,6 @@
 package escuelaing.edu.co.truckcar.fleet_allocation.service;
 
+import escuelaing.edu.co.truckcar.fleet_allocation.exception.LoadNotFoundException;
 import escuelaing.edu.co.truckcar.fleet_allocation.dto.client.AvailableTruckDto;
 import escuelaing.edu.co.truckcar.fleet_allocation.dto.client.DriverCommitmentDto;
 import escuelaing.edu.co.truckcar.fleet_allocation.dto.client.FleetDriverStateDto;
@@ -117,16 +118,34 @@ public class FleetAllocationService implements IFleetAllocationService {
     @Observed(name = "truckcar.allocation.matching", contextualName = "allocation matching",
             lowCardinalityKeyValues = {"trigger", "load.published"})
     public AllocationResultResponse processAutomaticAllocationForLoad(Long loadId, UUID correlationId) {
+        return allocateLoad(loadId, correlationId, false);
+    }
+
+    /** Disparo manual por REST: a diferencia del evento, una carga inexistente es un error del cliente (404). */
+    @Override
+    @Transactional
+    @Observed(name = "truckcar.allocation.matching", contextualName = "allocation matching",
+            lowCardinalityKeyValues = {"trigger", "manual"})
+    public AllocationResultResponse matchLoadOnDemand(Long loadId) {
+        return allocateLoad(loadId, null, true);
+    }
+
+    private AllocationResultResponse allocateLoad(Long loadId, UUID correlationId, boolean loadMustExist) {
         countAiRequest();
         Optional<FreightLoadDto> load;
         Optional<List<AvailableTruckDto>> availableTrucks;
         try {
             load = fetchLoadFromService(loadId);
             if (load.isEmpty()) {
+                if (loadMustExist) {
+                    throw new LoadNotFoundException(loadId);
+                }
                 return pendingRecommendation(loadId,
                         "La carga no existe en Load-Allocation; la recomendación queda pendiente sin datos sintéticos");
             }
             availableTrucks = fetchAvailableTrucksFromService(loadId);
+        } catch (LoadNotFoundException notFound) {
+            throw notFound;
         } catch (RuntimeException unavailable) {
             return noCandidatesAvailable(loadId, Set.of(), "load.published", correlationId, unavailable);
         }

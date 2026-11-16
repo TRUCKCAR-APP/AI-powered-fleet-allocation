@@ -37,7 +37,7 @@ public class FleetAllocationController {
             @PathVariable Long loadId,
             @RequestHeader(value = AUTH_ROLE_HEADER, required = false) String authenticatedRole) {
         requireControlTower(authenticatedRole);
-        AllocationResultResponse result = service.processAutomaticAllocationForLoad(loadId);
+        AllocationResultResponse result = service.matchLoadOnDemand(loadId);
         // La decisión se devuelve siempre; el código HTTP refleja si Load-Allocation la aplicó.
         HttpStatus status = switch (result.getStatus()) {
             case ASSIGNMENT_CONFLICT -> HttpStatus.CONFLICT;

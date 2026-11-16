@@ -127,6 +127,18 @@ class FleetAllocationReallocationTest {
         verify(kafkaTemplate, Mockito.never()).send(Mockito.<String>any(), any(), any());
     }
 
+    @Test
+    void manualMatchOfMissingLoadIsNotFound() {
+        when(restClient.get().uri(anyString()).retrieve().body(FreightLoadDto.class))
+                .thenThrow(org.springframework.web.client.HttpClientErrorException.create(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Not Found",
+                        org.springframework.http.HttpHeaders.EMPTY, new byte[0], null));
+
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.matchLoadOnDemand(42L))
+                .isInstanceOf(escuelaing.edu.co.truckcar.fleet_allocation.exception.LoadNotFoundException.class);
+        verify(kafkaTemplate, Mockito.never()).send(Mockito.<String>any(), any(), any());
+    }
+
     private EventEnvelope<?> publishedEnvelope() {
         ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
         verify(kafkaTemplate).send(Mockito.<String>any(), eq("42"), captor.capture());
