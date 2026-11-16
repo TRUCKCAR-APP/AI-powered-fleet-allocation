@@ -1,0 +1,27 @@
+{
+  "eventId": "6f1c2a4e-0b7d-4c55-9a39-3f0d1a2b3c4d",
+  "eventType": "assignment.proposed",
+  "occurredAt": "2026-11-16T18:31:01Z",
+  "correlationId": "0e9c8b7a-6d5e-4f3a-8b2c-1d0e9f8a7b6c",
+  "version": 1,
+  "producer": "load-allocation",
+  "payload": {
+    "loadId": 95,
+    "generatorCompanyId": "gen-1",
+    "cargoDescription": "Café en sacos",
+    "weightTons": 20.0,
+    "requiredTruckType": "TRACTOMULA_3S3",
+    "originCity": "Bogotá",
+    "destinationCity": "Tunja",
+    "offeredBudget": 2500000,
+    "loadStatus": "AVAILABLE",
+    "assignmentStatus": "PROPOSED",
+    "assignedDriverId": "driver-1",
+    "assignedDriverName": "Ana Pérez",
+    "assignedVehiclePlate": "TDK-410",
+    "assignmentAttempts": 1,
+    "excludedDriverIds": ["driver-0"],
+    "cancellationReason": null,
+    "proposedBy": "TORRE"
+  }
+}
