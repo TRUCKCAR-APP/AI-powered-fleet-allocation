@@ -17,6 +17,9 @@ public interface IFleetAllocationService {
     default AllocationResultResponse processAutomaticAllocationForLoad(Long loadId) {
         return processAutomaticAllocationForLoad(loadId, null);
     }
+
+    /** Matching manual (POST /match/{loadId}): lanza LoadNotFoundException si la carga no existe en Load-Allocation. */
+    AllocationResultResponse matchLoadOnDemand(Long loadId);
     List<AllocationResultResponse> getDecisionsByLoad(Long loadId);
 
     /** Reintenta el matching de las cargas en espera cuando un conductor se libera (trip.delivered, load.cancelled). */

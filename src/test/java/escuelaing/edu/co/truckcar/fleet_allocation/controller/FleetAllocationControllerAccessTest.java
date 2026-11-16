@@ -2,6 +2,7 @@ package escuelaing.edu.co.truckcar.fleet_allocation.controller;
 
 import escuelaing.edu.co.truckcar.fleet_allocation.dto.response.AllocationResultResponse;
 import escuelaing.edu.co.truckcar.fleet_allocation.exception.GlobalExceptionHandler;
+import escuelaing.edu.co.truckcar.fleet_allocation.exception.LoadNotFoundException;
 import escuelaing.edu.co.truckcar.fleet_allocation.model.AllocationStatus;
 import escuelaing.edu.co.truckcar.fleet_allocation.service.IFleetAllocationService;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +20,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /** El matching manual y el historial de decisiones son solo para la torre de control. */
@@ -30,7 +32,7 @@ class FleetAllocationControllerAccessTest {
     @BeforeEach
     void setUp() {
         service = mock(IFleetAllocationService.class);
-        when(service.processAutomaticAllocationForLoad(anyLong()))
+        when(service.matchLoadOnDemand(anyLong()))
                 .thenReturn(AllocationResultResponse.builder().status(AllocationStatus.SUCCESSFUL).build());
         when(service.getDecisionsByLoad(anyLong())).thenReturn(List.of());
         mvc = MockMvcBuilders.standaloneSetup(new FleetAllocationController(service))
@@ -51,6 +53,15 @@ class FleetAllocationControllerAccessTest {
         mvc.perform(post("/api/v1/fleet-allocation/match/7").header("X-Auth-Role", role)).andExpect(status().isForbidden());
         mvc.perform(get("/api/v1/fleet-allocation/history/7").header("X-Auth-Role", role)).andExpect(status().isForbidden());
         verifyNoInteractions(service);
+    }
+
+    @Test
+    void unknownLoadIsNotFound() throws Exception {
+        when(service.matchLoadOnDemand(404L)).thenThrow(new LoadNotFoundException(404L));
+        mvc.perform(post("/api/v1/fleet-allocation/match/404").header("X-Auth-Role", "COORDINADOR"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("Carga no encontrada"))
+                .andExpect(jsonPath("$.message").value("No existe la carga con id 404"));
     }
 
     @Test
