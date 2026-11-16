@@ -53,6 +53,13 @@ public class AllocationDecision {
     @Column(name = "evaluated_candidates_count")
     private Integer evaluatedCandidatesCount;
 
+    /** Candidatos evaluados en el orden del motor (mejor puntaje primero), con su desglose o motivo de descarte. */
+    @ElementCollection
+    @CollectionTable(name = "allocation_decision_candidates", joinColumns = @JoinColumn(name = "decision_id"))
+    @OrderColumn(name = "rank_position")
+    @Builder.Default
+    private java.util.List<EvaluatedCandidate> candidates = new java.util.ArrayList<>();
+
     @Column(name = "executed_at", nullable = false)
     private LocalDateTime executedAt;
 }

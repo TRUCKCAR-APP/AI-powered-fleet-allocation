@@ -158,6 +158,38 @@ class FleetAllocationMatchTest {
         assertThat(publishedEventTypes()).doesNotContain("agent.no.candidates");
     }
 
+    /** Lote 5: la decisión guarda a todos los evaluados en el orden del motor y el historial los devuelve. */
+    @Test
+    void theDecisionKeepsEveryEvaluatedCandidateAndTheHistoryShowsThem() {
+        givenLoad(List.of());
+        when(restClient.get().uri(anyString()).retrieve().body(any(ParameterizedTypeReference.class)))
+                .thenReturn(List.of(state("driver-new"), state("driver-old"), state("driver-small")));
+        when(optimizer.evaluateTruck(any(AvailableTruckDto.class), any(FreightLoadDto.class))).thenAnswer(invocation -> {
+            AvailableTruckDto truck = invocation.getArgument(0);
+            return switch (truck.getDriverId()) {
+                case "driver-old" -> AllocationCandidateResponse.builder().driverId("driver-old").eligible(true).score(88.0)
+                        .proximityPoints(45.0).capacityPoints(25.0).ratingPoints(18.0).build();
+                case "driver-new" -> AllocationCandidateResponse.builder().driverId("driver-new").eligible(true).score(70.0)
+                        .proximityPoints(30.0).capacityPoints(24.0).ratingPoints(16.0).build();
+                default -> AllocationCandidateResponse.builder().driverId(truck.getDriverId()).eligible(false).score(0.0)
+                        .reason("Capacidad insuficiente (10.0 Tn < 20.0 Tn requeridas)").build();
+            };
+        });
+
+        service.processAutomaticAllocationForLoad(42L);
+
+        assertThat(savedDecision.getCandidates()).extracting(c -> c.getDriverId())
+                .containsExactly("driver-old", "driver-new", "driver-small");
+        assertThat(savedDecision.getExplanation()).contains("cercanía 45,0 + capacidad 25,0 + calificación 18,0");
+
+        when(repository.findByLoadIdOrderByExecutedAtDesc(42L)).thenReturn(List.of(savedDecision));
+        List<AllocationCandidateResponse> history = service.getDecisionsByLoad(42L).get(0).getEvaluatedCandidates();
+        assertThat(history).hasSize(3);
+        assertThat(history.get(0).getProximityPoints()).isEqualTo(45.0);
+        assertThat(history.get(2).getEligible()).isFalse();
+        assertThat(history.get(2).getReason()).startsWith("Capacidad insuficiente");
+    }
+
     private List<String> publishedEventTypes() {
         ArgumentCaptor<Object> sent = ArgumentCaptor.forClass(Object.class);
         verify(kafka, org.mockito.Mockito.atLeast(0)).send(any(), anyString(), sent.capture());

@@ -105,9 +105,17 @@ public class FleetScoringOptimizer {
                 .deadheadDistanceKm(deadhead)
                 .capacityUtilizationPercent(roundedUtilization)
                 .score(roundedScore)
+                // Desglose en puntos sobre 100: cada factor por su peso. Suman el puntaje (salvo el redondeo a 0,1).
+                .proximityPoints(points(proximityScore * WEIGHT_PROXIMITY))
+                .capacityPoints(points(capacityEfficiency * WEIGHT_CAPACITY))
+                .ratingPoints(points(ratingFactor * WEIGHT_RATING))
                 .eligible(true)
                 .reason("Candidato idóneo evaluado por modelo heurístico multicriterio")
                 .build();
+    }
+
+    private static double points(double weightedFactor) {
+        return Math.round(weightedFactor * 1000.0) / 10.0;
     }
 
     private static AllocationCandidateResponse ineligible(AvailableTruckDto truck, String reason) {
