@@ -23,6 +23,25 @@ class FleetScoringOptimizerTest {
                 .rating(4.5).status("ACTIVO").currentLatitude(4.6486).currentLongitude(-74.1481);
     }
 
+    /** Carga propia de una transportadora: solo sus conductores entran; los demás quedan fuera con el motivo. */
+    @Test
+    void anOwnLoadOfACompanyIsOnlyForItsDrivers() {
+        FreightLoadDto own = FreightLoadDto.builder().id(90L).weightTons(24.0).requiredTruckType("TRACTOMULA_3S3")
+                .originLatitude(4.6486).originLongitude(-74.1481).ownerCompanyId("c-andinos")
+                .generatorCompanyName("Transportes Andinos").build();
+        AvailableTruckDto mine = state("andres").companyId("c-andinos").maxPayloadTons(34.0).build().toAvailableTruck();
+        AvailableTruckDto other = state("jorge").companyId("c-pacifico").maxPayloadTons(34.0).build().toAvailableTruck();
+        AvailableTruckDto independent = state("libre").maxPayloadTons(34.0).build().toAvailableTruck();
+
+        assertThat(optimizer.evaluateTruck(mine, own).getEligible()).isTrue();
+        for (AvailableTruckDto truck : java.util.List.of(other, independent)) {
+            AllocationCandidateResponse result = optimizer.evaluateTruck(truck, own);
+            assertThat(result.getEligible()).isFalse();
+            assertThat(result.getReason()).isEqualTo("Carga propia de Transportes Andinos: solo para sus conductores");
+        }
+        assertThat(optimizer.evaluateTruck(other, LOAD).getEligible()).as("una carga de un generador sigue abierta a todos").isTrue();
+    }
+
     @Test
     void anUnverifiedAccountIsNeverEligibleAndTheReasonSaysWhy() {
         AvailableTruckDto pending = state("nuevo").accountVerified(false).maxPayloadTons(34.0).build().toAvailableTruck();

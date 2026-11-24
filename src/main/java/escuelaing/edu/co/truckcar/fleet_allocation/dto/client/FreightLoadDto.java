@@ -29,4 +29,8 @@ public class FreightLoadDto {
     private String assignmentStatus;
     /** Conductores que ya rechazaron o dejaron vencer esta carga (no se les vuelve a proponer). */
     private List<String> discardedDriverIds;
+    /** Carga propia de una transportadora (Load-Allocation): solo la llevan sus conductores. */
+    private String ownerCompanyId;
+    /** En una carga propia, el nombre de la empresa que la publicó. */
+    private String generatorCompanyName;
 }

@@ -18,6 +18,8 @@ import lombok.NoArgsConstructor;
 public class FleetDriverStateDto {
 
     private String driverId;
+    /** Transportadora del conductor (id en user-identity); null si es independiente o sin afiliación. */
+    private String companyId;
     private String driverName;
     private Double rating;
     private String vehiclePlate;
@@ -60,6 +62,7 @@ public class FleetDriverStateDto {
     public AvailableTruckDto toAvailableTruck() {
         return AvailableTruckDto.builder()
                 .driverId(driverId)
+                .companyId(companyId)
                 .driverName(driverName)
                 .rating(rating)
                 .plate(vehiclePlate)

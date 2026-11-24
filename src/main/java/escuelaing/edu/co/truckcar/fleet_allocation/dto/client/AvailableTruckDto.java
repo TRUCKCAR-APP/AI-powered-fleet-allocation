@@ -33,4 +33,6 @@ public class AvailableTruckDto {
     private Double onBoardTons;
     /** Motivo de incompatibilidad con la ruta de la carga (gálibo o peso); null si es apta o no se pudo verificar. */
     private String routeRestrictionReason;
+    /** Transportadora del conductor: una carga propia de una empresa solo se ofrece a sus conductores. */
+    private String companyId;
 }
