@@ -34,6 +34,12 @@ public class FleetScoringOptimizer {
                     .build();
         }
 
+        // Carga propia de una transportadora: solo sus conductores (Load-Allocation rechaza a cualquier otro).
+        if (load.getOwnerCompanyId() != null && !load.getOwnerCompanyId().equals(truck.getCompanyId())) {
+            return ineligible(truck, "Carga propia de " + (load.getGeneratorCompanyName() != null
+                    ? load.getGeneratorCompanyName() : "otra transportadora") + ": solo para sus conductores");
+        }
+
         // Regla estricta: sin verificación explícita (también si fleets-drivers no la informa) no hay carga.
         if (!Boolean.TRUE.equals(truck.getAccountVerified())) {
             return ineligible(truck, "Cuenta del conductor sin verificar: un administrador debe verificarla en la torre de control");
